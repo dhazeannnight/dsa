@@ -1,0 +1,247 @@
+/* Group 5: SDG 7 - Affordable and Clean Energy (Power Grid Expansion)
+The Situation:
+CASURECO (Camarines Sur II Electric Cooperative) has obtained funding to extend electricity
+access to three remote, mountainous barangays located on the slopes of Mt. Isarog. The costs
+associated with copper wiring and installation labor are exceedingly high, and the financial
+resources are limited.
+
+The Challenge:
+The team is tasked with determining the most cost-effective method to connect all the new
+barangays to the existing power grid. By employing Minimum Spanning Tree algorithms (such
+as Kruskal's or Prim's), the application must delineate the precise routes for the power lines
+that utilize the least total length of wire while ensuring connectivity for every area.
+*/
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <string>
+#include <memory>
+
+using namespace std;
+
+// EDGE
+// one connection between two locations
+class Edge {
+public:
+    int source;
+    int target;
+    int cost;
+
+    // Constructor
+    Edge(int source, int target, int cost) {
+        this->source = source;
+        this->target = target;
+        this->cost = cost;
+    }
+};
+
+// Compare to sort edges by cost
+bool compareCost(Edge a, Edge b) {
+    return a.cost < b.cost;
+}
+
+// GRAPH
+class Grid {
+private:
+    int nodes; //how many locations
+    vector<Edge> edges; // all possible connections
+    vector<string> names; // names of locations
+
+public:
+    Grid(int nodes) {
+        this->nodes = nodes; // set number of locations
+
+        this->names = {
+            "CASURECO II",
+            "Brgy Panicuason",
+            "Brgy Carolina",
+            "Brgy Pacol"
+        };
+    }
+
+    // Add a connection between two locations with a cost
+    void add(int source, int target, int cost) {
+        this->edges.push_back(Edge(source, target, cost));
+    }
+
+    // prevent cycles in the Minimum Spanning Tree
+    int find(vector<int>& parent, int node) {
+        if (parent[node] == node)
+            return node;
+
+        return find(parent, parent[node]);
+    }
+
+    //mark two locations as connected
+    void connect(vector<int>& parent, int first, int second) {
+        int rootA = find(parent, first);
+        int rootB = find(parent, second);
+
+        parent[rootA] = rootB;
+    }
+
+    // show list of locations
+    void display_loc() {
+        cout << "\nLOCATIONS\n";
+
+        for (int i = 0; i < this->nodes; i++) {
+            cout << i << " - " << this->names[i] << endl;
+        }
+    }
+
+    // clear existing connections and input new ones (if there is)
+    void int_connect() {
+        this->edges.clear();
+
+        cout << "\nEnter cost for each connection:\n";
+
+        // cost between each pair of locations
+        for (int i = 0; i < this->nodes; i++) {
+            for (int j = i + 1; j < this->nodes; j++) {
+
+                int cost;
+
+                cout << this->names[i]
+                     << " --> "
+                     << this->names[j]
+                     << " = ";
+
+                cin >> cost;
+
+                this->add(i, j, cost);
+            }
+        }
+    }
+
+    void Kruskal() {
+
+        // sort connections by cost(from cheapest to most expensive)
+        sort(this->edges.begin(),
+             this->edges.end(),
+             compareCost);
+
+        // parent array to keep track of connected locations
+        vector<int> parent(this->nodes);
+
+        // initially, each location is its own parent (not connected)
+        for (int i = 0; i < this->nodes; i++) {
+            parent[i] = i;
+        }
+
+        vector<Edge> line;
+
+        int total = 0;
+
+        //check each connection in order of cost
+        for (Edge edge : this->edges) {
+
+            // check if the two locations are already connected
+            int rootA = find(parent, edge.source);
+            int rootB = find(parent, edge.target);
+
+            // if they are not connected, choose this connection and connect them
+            if (rootA != rootB) {
+
+                line.push_back(edge);
+
+                total += edge.cost;
+
+                connect(parent, rootA, rootB);
+            }
+        }
+
+        cout << "\n=====================================\n";
+        cout << " Power Grid Expansion Plan\n";
+        cout << "=====================================\n\n";
+
+        //prints the chosen connections and their costs
+        for (Edge edge : line) {
+
+            cout << this->names[edge.source]
+                 << " --> "
+                 << this->names[edge.target]
+                 << " = Cost: "
+                 << edge.cost
+                 << endl;
+        }
+
+        // cout << "\n-------------------------------------\n";
+        cout << "TOTAL MINIMUM COST: " << total << endl;
+        // cout << "-------------------------------------\n";
+
+        // NETWORK VIEW
+        cout << "\nNETWORK CONNECTION:\n";
+
+        // create an adjacency list to show which locations are connected to which
+        vector<vector<int>> network(this->nodes);
+
+        // populate the adjacency list with the chosen connections
+        for (Edge edge : line) {
+            network[edge.source].push_back(edge.target);
+            network[edge.target].push_back(edge.source);
+        }
+
+        for (int i = 0; i < this->nodes; i++) {
+
+            cout << this->names[i] << " -> ";
+
+            for (int j : network[i]) {
+                cout << this->names[j] << " ";
+            }
+
+            cout << endl;
+        }
+    }
+};
+
+// MAIN
+int main() {
+
+    // create a grid with 4 locations
+    // manages memory automatically, no need to manually delete
+    unique_ptr<Grid> grid = make_unique<Grid>(4);
+
+    int choice;
+
+    do {
+
+        cout << "\n=====================================\n";
+        cout << "   SDG 7 POWER GRID SYSTEM\n";
+        cout << "=====================================\n";
+
+        cout << "1. View Locations\n";
+        cout << "2. Enter Connection Costs\n";
+        cout << "3. Generate Optimal Plan\n";
+        cout << "4. Exit\n";
+
+        cout << "Choice: ";
+
+        cin >> choice;
+
+        switch (choice) {
+
+        case 1:
+            grid->display_loc();
+            break;
+
+        case 2:
+            grid->int_connect();
+            break;
+
+        case 3:
+            grid->Kruskal();
+            break;
+
+        case 4:
+            cout << "Exiting system...\n";
+            break;
+
+        default:
+            cout << "Invalid choice!\n";
+        }
+
+    } while (choice != 4);
+
+    return 0;
+}
